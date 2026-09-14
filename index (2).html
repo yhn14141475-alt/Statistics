@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>대화 퀴즈</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --bg:#3B2523;
+    --card:#46302D;
+    --line:#EBD9D5;
+    --ink:#F7EEEC;
+    --ink-soft:#CBB2AD;
+    --rose:#B94A5C;
+    --rose-dark:#9C3B4C;
+    --ok:#7FB08A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Apple SD Gothic Neo','Pretendard','Malgun Gothic',system-ui,sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    padding:28px 16px 40px;
+    min-height:100%;
+  }
+  .wrap{width:100%; max-width:480px;}
+  .kicker{
+    font-size:14px; color:var(--ink-soft); letter-spacing:0.02em;
+    text-align:center; margin-bottom:6px;
+  }
+  h1{
+    font-size:24px; font-weight:800; text-align:center; margin-bottom:24px;
+    letter-spacing:-0.01em; line-height:1.4;
+  }
+  .options{display:flex; flex-direction:column; gap:12px; margin-bottom:18px;}
+  .opt{
+    display:flex; align-items:flex-start; gap:14px;
+    background:var(--card);
+    border:1.5px solid var(--line);
+    border-radius:16px;
+    padding:18px 18px;
+    cursor:pointer;
+    text-align:left;
+    width:100%;
+    color:var(--ink);
+    font-family:inherit;
+    transition:border-color .12s, background .12s;
+  }
+  .opt .num{
+    width:34px; height:34px; border-radius:50%;
+    background:var(--rose);
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:700; color:#fff;
+    flex:none; margin-top:2px;
+  }
+  .opt .txt{flex:1;}
+  .opt .thumb{
+    width:64px; height:64px; flex:none;
+    border-radius:12px; background:#563A36;
+    display:flex; align-items:center; justify-content:center;
+    margin-top:2px;
+  }
+  .opt .thumb svg{width:54px; height:54px; display:block;}
+  .opt .main{font-size:16px; font-weight:700; line-height:1.5;}
+  .opt .sub{font-size:13.5px; font-style:italic; color:var(--ink-soft); margin-top:8px; display:block;}
+  .opt.selected{border-color:var(--rose); border-width:2.5px; padding:17px; background:#523632;}
+  .opt:focus-visible{outline:3px solid var(--rose); outline-offset:2px;}
+  .submit{
+    width:100%;
+    background:var(--rose); color:#fff;
+    border:none; border-radius:14px;
+    padding:16px; font-size:17px; font-weight:800;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .submit:disabled{background:#6B534F; color:#A79390; cursor:default;}
+  .submit:hover:not(:disabled){background:var(--rose-dark);}
+  .notice{
+    text-align:center; font-size:13px; color:var(--ink-soft); margin-top:14px; line-height:1.6;
+  }
+  .result{
+    background:var(--card); border:1.5px solid var(--line); border-radius:20px;
+    padding:32px 22px; text-align:center;
+  }
+  .result .big{font-size:42px; margin-bottom:10px;}
+  .result h2{font-size:21px; font-weight:800; margin-bottom:10px;}
+  .result p{font-size:15px; color:var(--ink-soft); line-height:1.7;}
+  footer{margin-top:auto; padding-top:34px; width:100%; max-width:480px;}
+  footer .foot-inner{display:flex; flex-direction:column; align-items:center; gap:10px;}
+  footer .link-btn{
+    background:none; border:none; color:var(--ink-soft);
+    font-size:13px; text-decoration:underline; cursor:pointer; font-family:inherit;
+  }
+  #login-box{
+    display:none; width:100%; max-width:320px;
+    background:var(--card); border:1.5px solid var(--line); border-radius:14px;
+    padding:14px;
+  }
+  #login-box.open{display:block;}
+  #login-box label{display:block; font-size:13px; color:var(--ink-soft); margin-bottom:6px;}
+  .row{display:flex; gap:8px;}
+  input[type=password], input[type=text]{
+    width:100%; border:1.5px solid var(--line); border-radius:10px;
+    padding:11px 12px; font-size:14px; font-family:inherit;
+    background:#3B2523; color:var(--ink);
+  }
+  input:focus{outline:2px solid var(--rose);}
+  .btn-line{
+    background:transparent; border:2px solid var(--line); color:var(--ink);
+    border-radius:10px; padding:10px 16px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:inherit; white-space:nowrap;
+  }
+  .btn-line:hover{background:#523632;}
+  .btn-line.danger{border-color:var(--rose); color:#F1B7C0;}
+  .btn-fill{
+    background:var(--rose); border:2px solid var(--rose); color:#fff;
+    border-radius:10px; padding:10px 16px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:inherit; white-space:nowrap;
+  }
+  .btn-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .admin h2{font-size:19px; font-weight:800; margin:26px 0 12px;}
+  .admin h2:first-of-type{margin-top:0;}
+  .panel{
+    background:var(--card); border:1.5px solid var(--line); border-radius:16px;
+    padding:18px;
+  }
+  .stat-total{font-size:15px; color:var(--ink-soft); margin-bottom:16px;}
+  .stat-total b{color:var(--ink); font-size:20px;}
+  .bar-row{margin-bottom:14px;}
+  .bar-label{
+    display:flex; justify-content:space-between; gap:10px;
+    font-size:13.5px; font-weight:600; margin-bottom:5px; line-height:1.4;
+  }
+  .bar-label .cnt{color:var(--ink-soft); font-weight:500; white-space:nowrap;}
+  .bar-track{
+    background:#3B2523; border:1px solid var(--line);
+    border-radius:8px; height:20px; overflow:hidden;
+  }
+  .bar-fill{height:100%; background:var(--rose); transition:width .3s;}
+  .bar-row.correct .bar-fill{background:var(--ok);}
+  .panel label{display:block; font-size:14px; font-weight:600; margin-bottom:8px;}
+  #qr-url{margin-bottom:10px;}
+  #qrbox{display:flex; justify-content:center; padding:16px 0 6px;}
+  #qrbox img, #qrbox canvas{border:10px solid #fff; border-radius:4px;}
+  .hint{font-size:12.5px; color:var(--ink-soft); line-height:1.7; margin-top:10px;}
+  .msg{
+    border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.6;
+    margin:0 0 14px; display:none;
+  }
+  .msg.err{background:#5A2E33; border:1.5px solid var(--rose); color:#F1B7C0;}
+  .msg.show{display:block;}
+  #confirm-reset{display:none; margin-top:12px; font-size:13.5px; line-height:1.6;}
+  #confirm-reset.open{display:block;}
+  #confirm-reset .btn-row{margin-top:8px;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+
+  <!-- ===== 퀴즈 화면 ===== -->
+  <div id="view-quiz">
+    <p class="kicker">Quiz</p>
+    <h1>다음 대화의 상황으로<br>가장 알맞은 것은?</h1>
+
+    <div class="msg err" id="quiz-err"></div>
+
+    <div class="options" id="options" role="radiogroup" aria-label="보기">
+      <button class="opt" data-i="0">
+        <span class="num">1</span>
+        <span class="thumb" aria-hidden="true">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="12" r="2.5" fill="#E8B04B"/>
+            <circle cx="53" cy="10" r="2.5" fill="#7FB08A"/>
+            <circle cx="57" cy="25" r="2" fill="#D9707F"/>
+            <circle cx="7" cy="26" r="2" fill="#F7EEEC"/>
+            <rect x="22" y="22" width="4" height="12" rx="2" fill="#F7EEEC"/>
+            <rect x="30" y="20" width="4" height="14" rx="2" fill="#F7EEEC"/>
+            <rect x="38" y="22" width="4" height="12" rx="2" fill="#F7EEEC"/>
+            <ellipse cx="24" cy="18.5" rx="2.2" ry="3" fill="#E8B04B"/>
+            <ellipse cx="32" cy="16.5" rx="2.2" ry="3" fill="#E8B04B"/>
+            <ellipse cx="40" cy="18.5" rx="2.2" ry="3" fill="#E8B04B"/>
+            <rect x="14" y="34" width="36" height="18" rx="4" fill="#B94A5C"/>
+            <path d="M14 34 h36 v4 q-4.5 5 -9 0 q-4.5 5 -9 0 q-4.5 5 -9 0 q-4.5 5 -9 0 z" fill="#F7EEEC"/>
+            <rect x="10" y="52" width="44" height="4" rx="2" fill="#8A5A44"/>
+          </svg>
+        </span>
+        <span class="txt">
+          <span class="main">Two colleagues planning a surprise birthday party</span>
+          <span class="sub">Thursday = the birthday</span>
+        </span>
+      </button>
+      <button class="opt" data-i="1">
+        <span class="num">2</span>
+        <span class="thumb" aria-hidden="true">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 15 c-2.4-3.4 -7-1 -5.8 2.3 c.8 2.3 5.8 5.7 5.8 5.7 c0 0 5-3.4 5.8-5.7 C19 14 14.4 11.6 12 15 z" fill="#D9707F"/>
+            <path d="M52 10 c-1.8-2.6 -5.4-.8 -4.5 1.8 c.6 1.8 4.5 4.4 4.5 4.4 c0 0 3.9-2.6 4.5-4.4 c.9-2.6 -2.7-4.4 -4.5-1.8 z" fill="#D9707F"/>
+            <polygon points="32,5 38,11 32,17 26,11" fill="#F7EEEC"/>
+            <circle cx="32" cy="24" r="8" fill="none" stroke="#E8B04B" stroke-width="4"/>
+            <rect x="16" y="32" width="32" height="20" rx="4" fill="#B94A5C"/>
+            <rect x="16" y="32" width="32" height="5" fill="#9C3B4C"/>
+          </svg>
+        </span>
+        <span class="txt">
+          <span class="main">A man preparing a proposal, and the friend helping him</span>
+          <span class="sub">Thursday = the anniversary</span>
+        </span>
+      </button>
+      <button class="opt" data-i="2">
+        <span class="num">3</span>
+        <span class="thumb" aria-hidden="true">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="15" cy="30" rx="7" ry="12" fill="#8A5A44" transform="rotate(18 15 30)"/>
+            <ellipse cx="49" cy="30" rx="7" ry="12" fill="#8A5A44" transform="rotate(-18 49 30)"/>
+            <circle cx="32" cy="34" r="17" fill="#D9A05B"/>
+            <ellipse cx="32" cy="41" rx="9" ry="7" fill="#F7EEEC"/>
+            <circle cx="25.5" cy="30" r="2.4" fill="#3B2523"/>
+            <circle cx="38.5" cy="30" r="2.4" fill="#3B2523"/>
+            <ellipse cx="32" cy="38" rx="3" ry="2.4" fill="#3B2523"/>
+            <path d="M32 40 q0 4 3.5 5" stroke="#3B2523" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <ellipse cx="29.5" cy="47.5" rx="2.8" ry="3.8" fill="#D9707F"/>
+          </svg>
+        </span>
+        <span class="txt">
+          <span class="main">A couple adopting a puppy behind their daughter's back</span>
+          <span class="sub">Thursday = her birthday</span>
+        </span>
+      </button>
+      <button class="opt" data-i="3">
+        <span class="num">4</span>
+        <span class="thumb" aria-hidden="true">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="10" width="24" height="26" rx="2" fill="#F7EEEC"/>
+            <rect x="24" y="15" width="16" height="2.4" rx="1.2" fill="#CBB2AD"/>
+            <rect x="24" y="20" width="16" height="2.4" rx="1.2" fill="#CBB2AD"/>
+            <rect x="24" y="25" width="10" height="2.4" rx="1.2" fill="#CBB2AD"/>
+            <rect x="14" y="32" width="36" height="20" rx="3" fill="#B94A5C"/>
+            <path d="M14 32 L32 46 L50 32" fill="none" stroke="#F7EEEC" stroke-width="2.5" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="txt">
+          <span class="main">An employee about to resign, and a colleague who knows</span>
+          <span class="sub">Thursday = the notice</span>
+        </span>
+      </button>
+    </div>
+
+    <button class="submit" id="submit" disabled>제출하기</button>
+    <p class="notice">답을 제출하면 통계 집계를 위해 선택한 보기가 저장돼요.</p>
+  </div>
+
+  <!-- ===== 제출 완료 화면 ===== -->
+  <div id="view-done" class="hidden">
+    <p class="kicker">Quiz</p>
+    <h1>다음 대화의 상황으로<br>가장 알맞은 것은?</h1>
+    <div class="result">
+      <div class="big" id="done-emoji">✅</div>
+      <h2 id="done-title"></h2>
+      <p id="done-msg"></p>
+    </div>
+  </div>
+
+  <!-- ===== 관리자 화면 ===== -->
+  <div id="view-admin" class="hidden admin">
+    <p class="kicker">Quiz</p>
+    <h1>관리자</h1>
+
+    <div class="msg err" id="admin-err"></div>
+
+    <h2>응답 통계</h2>
+    <div class="panel">
+      <p class="stat-total">총 응답 <b id="stat-total">0</b>명</p>
+      <div id="stat-bars"></div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn-line" id="btn-refresh">새로고침</button>
+        <button class="btn-line danger" id="btn-reset">통계 초기화</button>
+      </div>
+      <div id="confirm-reset">
+        모든 응답 통계를 지울까요? 되돌릴 수 없어요.
+        <div class="btn-row">
+          <button class="btn-fill" id="btn-reset-yes">지우기</button>
+          <button class="btn-line" id="btn-reset-no">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <h2>QR 코드 만들기</h2>
+    <div class="panel">
+      <label for="qr-url">이 퀴즈 사이트의 주소</label>
+      <input type="text" id="qr-url" placeholder="https:// 로 시작하는 주소">
+      <div class="msg err" id="qr-err"></div>
+      <div class="btn-row">
+        <button class="btn-line" id="btn-qr">QR 만들기</button>
+        <button class="btn-line hidden" id="btn-qr-save">이미지 저장</button>
+      </div>
+      <div id="qrbox"></div>
+      <p class="hint">주소칸에는 지금 열려 있는 사이트 주소가 자동으로 들어가요. 만들어진 QR은 길게 눌러 저장하거나 "이미지 저장" 버튼을 누르면 돼요.</p>
+    </div>
+
+    <div class="btn-row" style="margin-top:18px">
+      <button class="btn-line" id="btn-back">퀴즈 화면으로</button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="foot-inner">
+      <button class="link-btn" id="btn-admin">관리자</button>
+      <div id="login-box">
+        <label for="pw-input">관리자 비밀번호</label>
+        <div class="row">
+          <input type="password" id="pw-input" autocomplete="off">
+          <button class="btn-fill" id="btn-login">확인</button>
+        </div>
+        <div class="msg err" id="login-err" style="margin:10px 0 0"></div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  // ============================================================
+  // ① Firebase 설정 — 여기에 본인의 config를 붙여넣으세요.
+  //    Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성에서
+  //    firebaseConfig = { ... } 안의 내용을 그대로 복사해 넣으면 됩니다.
+  //    databaseURL 항목이 꼭 포함되어야 해요 (Realtime Database 생성 후 표시됨).
+  // ============================================================
+  var FIREBASE_CONFIG = {
+    // apiKey: "AIzaSyBq3l_yS8NUxzzQBuxozTwNRKhiB49wdfM",
+    // authDomain: "statistics-cb2a9.firebaseapp.com",
+    // databaseURL: "여기에 붙여넣기",
+    // projectId: "statistics-cb2a9",
+    // storageBucket: "statistics-cb2a9.firebasestorage.app",
+    // messagingSenderId: "886339482929",
+    // appId: "1:886339482929:web:8fba2e020f71d70318ec10"
+  };
+
+  // ============================================================
+  // ② 퀴즈 설정
+  // ============================================================
+  var ADMIN_PW = "0213";        // 관리자 비밀번호 (꼭 바꿔서 쓰세요)
+  var OPTIONS  = [
+    "Two colleagues planning a surprise birthday party",
+    "A man preparing a proposal, and the friend helping him",
+    "A couple adopting a puppy behind their daughter's back",
+    "An employee about to resign, and a colleague who knows"
+  ];
+  var CORRECT  = null;          // 정답 번호: 1번=0, 2번=1 … / 정답 없이 집계만 하려면 null
+  var QUIZ_ID  = "quiz-v1";     // 퀴즈를 새로 바꾸면 뒤 숫자를 올리세요 (통계가 새로 시작됨)
+  // ============================================================
+
+  var selected = null;
+  var db = null;
+  var $ = function(id){ return document.getElementById(id); };
+
+  // Firebase 초기화
+  var configured = FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL;
+  if(configured){
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.database();
+    }catch(e){ db = null; }
+  }
+
+  function statsRef(){ return db.ref("quizzes/" + QUIZ_ID); }
+
+  function show(view){
+    ["view-quiz","view-done","view-admin"].forEach(function(v){
+      $(v).classList.toggle("hidden", v !== view);
+    });
+    window.scrollTo(0,0);
+  }
+  function msg(id, text){
+    var el = $(id);
+    el.textContent = text || "";
+    el.classList.toggle("show", !!text);
+  }
+
+  if(!db){
+    msg("quiz-err","아직 저장소(Firebase) 설정이 안 됐어요. 파일 안의 FIREBASE_CONFIG에 본인 설정을 붙여넣어야 응답이 저장돼요.");
+  }
+
+  // ---------- 통계 ----------
+  async function loadStats(){
+    var snap = await statsRef().get();
+    var v = snap.val() || {};
+    var counts = [0,0,0,0].map(function(_,i){ return (v.counts && v.counts[i]) || 0; });
+    return { counts: counts, total: v.total || 0 };
+  }
+  async function addVote(i){
+    var inc = firebase.database.ServerValue.increment(1);
+    var update = { total: inc };
+    update["counts/" + i] = inc;
+    await statsRef().update(update);
+  }
+  async function resetStats(){
+    await statsRef().set({ counts: {0:0,1:0,2:0,3:0}, total: 0 });
+  }
+
+  // 같은 기기에서 중복 제출 방지
+  function alreadyAnswered(){
+    try{ return !!localStorage.getItem("answered-" + QUIZ_ID); }catch(e){ return false; }
+  }
+  function markAnswered(i){
+    try{ localStorage.setItem("answered-" + QUIZ_ID, String(i)); }catch(e){}
+  }
+
+  // ---------- 퀴즈 ----------
+  var optBtns = Array.prototype.slice.call(document.querySelectorAll(".opt"));
+  optBtns.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      selected = parseInt(btn.dataset.i, 10);
+      optBtns.forEach(function(b){ b.classList.toggle("selected", b===btn); });
+      $("submit").disabled = false;
+    });
+  });
+
+  function renderDone(i){
+    if(CORRECT === null){
+      $("done-emoji").textContent = "✅";
+      $("done-title").textContent = "제출 완료!";
+      $("done-msg").textContent = "선택한 답: " + (i+1) + "번 · 참여해 주셔서 고마워요.";
+    }else if(i === CORRECT){
+      $("done-emoji").textContent = "🎉";
+      $("done-title").textContent = "정답이에요!";
+      $("done-msg").textContent = "선택한 답: " + (i+1) + "번 · 참여해 주셔서 고마워요.";
+    }else{
+      $("done-emoji").textContent = "🙊";
+      $("done-title").textContent = "아쉬워요!";
+      $("done-msg").textContent = "정답은 " + (CORRECT+1) + "번이었어요. 참여해 주셔서 고마워요.";
+    }
+    show("view-done");
+  }
+
+  $("submit").addEventListener("click", async function(){
+    if(selected === null) return;
+    var btn = $("submit");
+    btn.disabled = true;
+    btn.textContent = "제출 중…";
+    msg("quiz-err","");
+    if(!db){
+      msg("quiz-err","저장소 설정이 안 되어 있어 응답을 저장할 수 없어요.");
+      btn.disabled = false;
+      btn.textContent = "제출하기";
+      return;
+    }
+    try{
+      if(alreadyAnswered()){
+        renderDone(selected);
+        return;
+      }
+      await addVote(selected);
+      markAnswered(selected);
+      renderDone(selected);
+    }catch(e){
+      msg("quiz-err","저장에 실패했어요. 인터넷 연결을 확인하고 다시 제출해 주세요.");
+      btn.disabled = false;
+      btn.textContent = "제출하기";
+    }
+  });
+
+  // ---------- 관리자 로그인 ----------
+  $("btn-admin").addEventListener("click", function(){
+    var box = $("login-box");
+    box.classList.toggle("open");
+    if(box.classList.contains("open")) $("pw-input").focus();
+  });
+  function tryLogin(){
+    if($("pw-input").value === ADMIN_PW){
+      $("pw-input").value = "";
+      msg("login-err","");
+      $("login-box").classList.remove("open");
+      show("view-admin");
+      $("qr-url").value = window.location.href;
+      refreshStats();
+    }else{
+      msg("login-err","비밀번호가 맞지 않아요.");
+    }
+  }
+  $("btn-login").addEventListener("click", tryLogin);
+  $("pw-input").addEventListener("keydown", function(e){
+    if(e.key === "Enter") tryLogin();
+  });
+
+  $("btn-back").addEventListener("click", function(){ show("view-quiz"); });
+  $("btn-refresh").addEventListener("click", refreshStats);
+
+  async function refreshStats(){
+    msg("admin-err","");
+    var stats = { counts:[0,0,0,0], total:0 };
+    if(!db){
+      msg("admin-err","저장소(Firebase) 설정이 안 되어 있어요. 파일의 FIREBASE_CONFIG를 채워 주세요.");
+    }else{
+      try{ stats = await loadStats(); }
+      catch(e){ msg("admin-err","통계를 불러오지 못했어요. 인터넷 연결을 확인해 주세요."); }
+    }
+    $("stat-total").textContent = stats.total || 0;
+    var box = $("stat-bars");
+    box.innerHTML = "";
+    OPTIONS.forEach(function(name, i){
+      var cnt = stats.counts[i] || 0;
+      var pct = stats.total ? Math.round(cnt / stats.total * 100) : 0;
+      var row = document.createElement("div");
+      row.className = "bar-row" + (i===CORRECT ? " correct" : "");
+      var label = document.createElement("div");
+      label.className = "bar-label";
+      var left = document.createElement("span");
+      left.textContent = (i+1) + "번 " + name + (i===CORRECT ? " (정답)" : "");
+      var right = document.createElement("span");
+      right.className = "cnt";
+      right.textContent = cnt + "명 · " + pct + "%";
+      label.appendChild(left); label.appendChild(right);
+      var track = document.createElement("div");
+      track.className = "bar-track";
+      var fill = document.createElement("div");
+      fill.className = "bar-fill";
+      fill.style.width = pct + "%";
+      track.appendChild(fill);
+      row.appendChild(label); row.appendChild(track);
+      box.appendChild(row);
+    });
+  }
+
+  // ---------- 통계 초기화 ----------
+  $("btn-reset").addEventListener("click", function(){
+    $("confirm-reset").classList.add("open");
+  });
+  $("btn-reset-no").addEventListener("click", function(){
+    $("confirm-reset").classList.remove("open");
+  });
+  $("btn-reset-yes").addEventListener("click", async function(){
+    $("confirm-reset").classList.remove("open");
+    if(!db){ msg("admin-err","저장소 설정이 안 되어 있어요."); return; }
+    try{
+      await resetStats();
+      refreshStats();
+    }catch(e){
+      msg("admin-err","초기화에 실패했어요. 다시 시도해 주세요.");
+    }
+  });
+
+  // ---------- QR ----------
+  var qrMade = false;
+  $("btn-qr").addEventListener("click", function(){
+    var url = $("qr-url").value.trim();
+    if(!url){ msg("qr-err","주소를 먼저 입력해 주세요."); return; }
+    if(url.indexOf("http") !== 0){ msg("qr-err","https:// 로 시작하는 전체 주소를 입력해 주세요."); return; }
+    msg("qr-err","");
+    $("qrbox").innerHTML = "";
+    new QRCode($("qrbox"), { text:url, width:200, height:200, correctLevel:QRCode.CorrectLevel.M });
+    qrMade = true;
+    $("btn-qr-save").classList.remove("hidden");
+  });
+
+  $("btn-qr-save").addEventListener("click", function(){
+    if(!qrMade) return;
+    var canvas = $("qrbox").querySelector("canvas");
+    var img = $("qrbox").querySelector("img");
+    var dataUrl = canvas ? canvas.toDataURL("image/png") : (img ? img.src : null);
+    if(!dataUrl){ msg("qr-err","QR을 먼저 만들어 주세요."); return; }
+    var a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "quiz-qr.png";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+})();
+</script>
+</body>
+</html>
