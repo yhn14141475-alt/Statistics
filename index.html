@@ -158,14 +158,55 @@
   #confirm-reset.open{display:block;}
   #confirm-reset .btn-row{margin-top:8px;}
   .hidden{display:none !important;}
+  .round-badge{
+    display:inline-block; background:var(--rose); color:#fff;
+    font-size:13px; font-weight:800; padding:5px 12px; border-radius:999px;
+    margin:0 auto 10px; letter-spacing:.02em;
+  }
+  .center{text-align:center;}
+  .wait-dots{font-size:34px; margin-bottom:8px; letter-spacing:.2em;}
+  .state-box{
+    background:var(--card); border:1.5px solid var(--line); border-radius:16px;
+    padding:16px 18px; margin-bottom:14px;
+  }
+  .state-box .now{font-size:15px; color:var(--ink-soft); margin-bottom:12px;}
+  .state-box .now b{color:var(--ink); font-size:18px;}
+  .rbtn{
+    background:transparent; border:2px solid var(--line); color:var(--ink);
+    border-radius:10px; padding:10px 14px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:inherit;
+  }
+  .rbtn.active{background:var(--rose); border-color:var(--rose); color:#fff;}
+  .rbtn.done{border-color:var(--ok); color:var(--ok);}
+  .rbtn:disabled{opacity:.45; cursor:default;}
+  .tabs{display:flex; gap:6px; margin-bottom:14px;}
+  .tab{
+    flex:1; background:transparent; border:2px solid var(--line); color:var(--ink);
+    border-radius:10px; padding:8px; font-size:13.5px; font-weight:700;
+    cursor:pointer; font-family:inherit;
+  }
+  .tab.on{background:var(--rose); border-color:var(--rose); color:#fff;}
+  .live{font-size:12.5px; color:var(--ok); margin-left:6px;}
 </style>
 </head>
 <body>
 <div class="wrap" id="app">
 
-  <!-- ===== 퀴즈 화면 ===== -->
-  <div id="view-quiz">
+  <!-- ===== 대기 화면 (투표 시작 전 / 전체 종료) ===== -->
+  <div id="view-wait">
     <p class="kicker">Quiz</p>
+    <h1>다음 대화의 상황으로<br>가장 알맞은 것은?</h1>
+    <div class="result">
+      <div class="big" id="wait-emoji">⏳</div>
+      <h2 id="wait-title">잠시 기다려 주세요</h2>
+      <p id="wait-msg">관리자가 투표를 시작하면 화면이 자동으로 바뀌어요.</p>
+    </div>
+  </div>
+
+  <!-- ===== 퀴즈 화면 ===== -->
+  <div id="view-quiz" class="hidden">
+    <p class="kicker">Quiz</p>
+    <p class="center"><span class="round-badge" id="quiz-round">1차 투표</span></p>
     <h1>다음 대화의 상황으로<br>가장 알맞은 것은?</h1>
 
     <div class="msg err" id="quiz-err"></div>
@@ -251,6 +292,7 @@
       </button>
     </div>
 
+
     <button class="submit" id="submit" disabled>제출하기</button>
     <p class="notice">답을 제출하면 통계 집계를 위해 선택한 보기가 저장돼요.</p>
   </div>
@@ -258,6 +300,7 @@
   <!-- ===== 제출 완료 화면 ===== -->
   <div id="view-done" class="hidden">
     <p class="kicker">Quiz</p>
+    <p class="center"><span class="round-badge" id="done-round">1차 투표</span></p>
     <h1>다음 대화의 상황으로<br>가장 알맞은 것은?</h1>
     <div class="result">
       <div class="big" id="done-emoji">✅</div>
@@ -273,16 +316,32 @@
 
     <div class="msg err" id="admin-err"></div>
 
-    <h2>응답 통계</h2>
+    <h2>투표 진행</h2>
+    <div class="state-box">
+      <p class="now">현재 상태: <b id="state-now">시작 전</b></p>
+      <div class="btn-row">
+        <button class="rbtn" id="btn-r1" data-r="1">1차 투표 시작</button>
+        <button class="rbtn" id="btn-r2" data-r="2">2차 투표 시작</button>
+        <button class="rbtn" id="btn-r3" data-r="3">3차 투표 시작</button>
+        <button class="rbtn" id="btn-r4" data-r="4">투표 종료</button>
+      </div>
+      <p class="hint">버튼을 누르면 참가자 모두의 화면이 바로 그 차수 투표로 바뀌어요. 아래 통계에서 투표한 인원을 확인한 뒤 다음 차수로 넘기면 돼요.</p>
+    </div>
+
+    <h2>응답 통계 <span class="live">● 실시간</span></h2>
     <div class="panel">
+      <div class="tabs">
+        <button class="tab on" data-t="1">1차</button>
+        <button class="tab" data-t="2">2차</button>
+        <button class="tab" data-t="3">3차</button>
+      </div>
       <p class="stat-total">총 응답 <b id="stat-total">0</b>명</p>
       <div id="stat-bars"></div>
       <div class="btn-row" style="margin-top:14px">
-        <button class="btn-line" id="btn-refresh">새로고침</button>
-        <button class="btn-line danger" id="btn-reset">통계 초기화</button>
+        <button class="btn-line danger" id="btn-reset">전체 초기화</button>
       </div>
       <div id="confirm-reset">
-        모든 응답 통계를 지울까요? 되돌릴 수 없어요.
+        1·2·3차 통계를 모두 지우고 '시작 전' 상태로 되돌릴까요? 되돌릴 수 없어요.
         <div class="btn-row">
           <button class="btn-fill" id="btn-reset-yes">지우기</button>
           <button class="btn-line" id="btn-reset-no">취소</button>
@@ -304,7 +363,7 @@
     </div>
 
     <div class="btn-row" style="margin-top:18px">
-      <button class="btn-line" id="btn-back">퀴즈 화면으로</button>
+      <button class="btn-line" id="btn-back">참가자 화면으로</button>
     </div>
   </div>
 
@@ -326,10 +385,7 @@
 <script>
 (function(){
   // ============================================================
-  // ① Firebase 설정 — 여기에 본인의 config를 붙여넣으세요.
-  //    Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성에서
-  //    firebaseConfig = { ... } 안의 내용을 그대로 복사해 넣으면 됩니다.
-  //    databaseURL 항목이 꼭 포함되어야 해요 (Realtime Database 생성 후 표시됨).
+  // ① Firebase 설정
   // ============================================================
   var FIREBASE_CONFIG = {
     apiKey: "AIzaSyBq3l_yS8NUxzzQBuxozTwNRKhiB49wdfM",
@@ -344,7 +400,7 @@
   // ============================================================
   // ② 퀴즈 설정
   // ============================================================
-  var ADMIN_PW = "0213";        // 관리자 비밀번호 (꼭 바꿔서 쓰세요)
+  var ADMIN_PW = "0213";        // 관리자 비밀번호
   var OPTIONS  = [
     "Two colleagues planning a surprise birthday party",
     "A man preparing a proposal, and the friend helping him",
@@ -352,14 +408,23 @@
     "An employee about to resign, and a colleague who knows"
   ];
   var CORRECT  = null;          // 정답 번호: 1번=0, 2번=1 … / 정답 없이 집계만 하려면 null
-  var QUIZ_ID  = "quiz-v1";     // 퀴즈를 새로 바꾸면 뒤 숫자를 올리세요 (통계가 새로 시작됨)
+  var ROUNDS   = 3;             // 투표 차수
+  var QUIZ_ID  = "quiz-v2";     // 퀴즈를 새로 바꾸면 뒤 숫자를 올리세요 (통계가 새로 시작됨)
+  // ============================================================
+  // Firebase 구조:
+  //   quizzes/QUIZ_ID/round            → 0(시작 전) 1,2,3(진행 중) 4(종료)
+  //   quizzes/QUIZ_ID/rounds/1/counts  → {0:n,1:n,2:n,3:n}
+  //   quizzes/QUIZ_ID/rounds/1/total   → n
   // ============================================================
 
   var selected = null;
   var db = null;
+  var round = 0;          // 서버의 현재 차수
+  var adminMode = false;  // 관리자 화면을 보는 중이면 참가자 화면으로 자동 전환하지 않음
+  var adminTab = 1;       // 관리자 통계 탭
+  var latest = {};        // 서버 전체 스냅샷
   var $ = function(id){ return document.getElementById(id); };
 
-  // Firebase 초기화
   var configured = FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL;
   if(configured){
     try{
@@ -368,10 +433,11 @@
     }catch(e){ db = null; }
   }
 
-  function statsRef(){ return db.ref("quizzes/" + QUIZ_ID); }
+  function quizRef(){ return db.ref("quizzes/" + QUIZ_ID); }
+  function roundRef(r){ return db.ref("quizzes/" + QUIZ_ID + "/rounds/" + r); }
 
   function show(view){
-    ["view-quiz","view-done","view-admin"].forEach(function(v){
+    ["view-wait","view-quiz","view-done","view-admin"].forEach(function(v){
       $(v).classList.toggle("hidden", v !== view);
     });
     window.scrollTo(0,0);
@@ -381,34 +447,92 @@
     el.textContent = text || "";
     el.classList.toggle("show", !!text);
   }
+  function roundLabel(r){
+    if(r === 0) return "시작 전";
+    if(r > ROUNDS) return "투표 종료";
+    return r + "차 투표";
+  }
 
   if(!db){
     msg("quiz-err","아직 저장소(Firebase) 설정이 안 됐어요. 파일 안의 FIREBASE_CONFIG에 본인 설정을 붙여넣어야 응답이 저장돼요.");
   }
 
-  // ---------- 통계 ----------
-  async function loadStats(){
-    var snap = await statsRef().get();
-    var v = snap.val() || {};
-    var counts = [0,0,0,0].map(function(_,i){ return (v.counts && v.counts[i]) || 0; });
-    return { counts: counts, total: v.total || 0 };
-  }
-  async function addVote(i){
+  // ---------- 저장 ----------
+  async function addVote(r, i){
     var inc = firebase.database.ServerValue.increment(1);
-    var update = { total: inc };
-    update["counts/" + i] = inc;
-    await statsRef().update(update);
+    var update = {};
+    update["rounds/" + r + "/total"] = inc;
+    update["rounds/" + r + "/counts/" + i] = inc;
+    await quizRef().update(update);
   }
-  async function resetStats(){
-    await statsRef().set({ counts: {0:0,1:0,2:0,3:0}, total: 0 });
+  async function setRound(r){ await quizRef().child("round").set(r); }
+  async function resetAll(){ await quizRef().set({ round: 0, rounds: null }); }
+
+  // 같은 기기에서 같은 차수 중복 제출 방지
+  function answeredKey(r){ return "answered-" + QUIZ_ID + "-r" + r; }
+  function alreadyAnswered(r){
+    try{ return localStorage.getItem(answeredKey(r)); }catch(e){ return null; }
+  }
+  function markAnswered(r, i){
+    try{ localStorage.setItem(answeredKey(r), String(i)); }catch(e){}
+  }
+  function clearAnswered(){
+    try{ for(var r=1; r<=ROUNDS; r++) localStorage.removeItem(answeredKey(r)); }catch(e){}
   }
 
-  // 같은 기기에서 중복 제출 방지
-  function alreadyAnswered(){
-    try{ return !!localStorage.getItem("answered-" + QUIZ_ID); }catch(e){ return false; }
+  // ---------- 참가자 화면 결정 ----------
+  function resetSelection(){
+    selected = null;
+    optBtns.forEach(function(b){ b.classList.remove("selected"); });
+    var btn = $("submit");
+    btn.disabled = true;
+    btn.textContent = "제출하기";
+    msg("quiz-err","");
   }
-  function markAnswered(i){
-    try{ localStorage.setItem("answered-" + QUIZ_ID, String(i)); }catch(e){}
+
+  function renderParticipant(){
+    if(adminMode) return;
+    if(round === 0){
+      $("wait-emoji").textContent = "⏳";
+      $("wait-title").textContent = "잠시 기다려 주세요";
+      $("wait-msg").textContent = "관리자가 투표를 시작하면 화면이 자동으로 바뀌어요.";
+      show("view-wait");
+      return;
+    }
+    if(round > ROUNDS){
+      $("wait-emoji").textContent = "🎊";
+      $("wait-title").textContent = "모든 투표가 끝났어요";
+      $("wait-msg").textContent = "참여해 주셔서 고마워요.";
+      show("view-wait");
+      return;
+    }
+    var prev = alreadyAnswered(round);
+    if(prev !== null){
+      renderDone(round, parseInt(prev, 10));
+    }else{
+      $("quiz-round").textContent = roundLabel(round);
+      resetSelection();
+      show("view-quiz");
+    }
+  }
+
+  function renderDone(r, i){
+    $("done-round").textContent = roundLabel(r);
+    var next = (r < ROUNDS) ? " 다음 투표가 시작되면 화면이 자동으로 바뀌어요." : " 관리자가 투표를 마치면 화면이 바뀌어요.";
+    if(CORRECT === null){
+      $("done-emoji").textContent = "✅";
+      $("done-title").textContent = r + "차 투표 제출 완료!";
+      $("done-msg").textContent = "선택한 답: " + (i+1) + "번." + next;
+    }else if(i === CORRECT){
+      $("done-emoji").textContent = "🎉";
+      $("done-title").textContent = "정답이에요!";
+      $("done-msg").textContent = "선택한 답: " + (i+1) + "번." + next;
+    }else{
+      $("done-emoji").textContent = "🙊";
+      $("done-title").textContent = "아쉬워요!";
+      $("done-msg").textContent = "정답은 " + (CORRECT+1) + "번이었어요." + next;
+    }
+    show("view-done");
   }
 
   // ---------- 퀴즈 ----------
@@ -421,51 +545,55 @@
     });
   });
 
-  function renderDone(i){
-    if(CORRECT === null){
-      $("done-emoji").textContent = "✅";
-      $("done-title").textContent = "제출 완료!";
-      $("done-msg").textContent = "선택한 답: " + (i+1) + "번 · 참여해 주셔서 고마워요.";
-    }else if(i === CORRECT){
-      $("done-emoji").textContent = "🎉";
-      $("done-title").textContent = "정답이에요!";
-      $("done-msg").textContent = "선택한 답: " + (i+1) + "번 · 참여해 주셔서 고마워요.";
-    }else{
-      $("done-emoji").textContent = "🙊";
-      $("done-title").textContent = "아쉬워요!";
-      $("done-msg").textContent = "정답은 " + (CORRECT+1) + "번이었어요. 참여해 주셔서 고마워요.";
-    }
-    show("view-done");
-  }
-
   $("submit").addEventListener("click", async function(){
     if(selected === null) return;
+    var r = round;
     var btn = $("submit");
     btn.disabled = true;
     btn.textContent = "제출 중…";
     msg("quiz-err","");
     if(!db){
       msg("quiz-err","저장소 설정이 안 되어 있어 응답을 저장할 수 없어요.");
-      btn.disabled = false;
-      btn.textContent = "제출하기";
+      btn.disabled = false; btn.textContent = "제출하기";
+      return;
+    }
+    if(r < 1 || r > ROUNDS){
+      msg("quiz-err","지금은 투표 시간이 아니에요.");
       return;
     }
     try{
-      if(alreadyAnswered()){
-        renderDone(selected);
+      if(alreadyAnswered(r) !== null){
+        renderDone(r, selected);
         return;
       }
-      await addVote(selected);
-      markAnswered(selected);
-      renderDone(selected);
+      await addVote(r, selected);
+      markAnswered(r, selected);
+      renderDone(r, selected);
     }catch(e){
       msg("quiz-err","저장에 실패했어요. 인터넷 연결을 확인하고 다시 제출해 주세요.");
-      btn.disabled = false;
-      btn.textContent = "제출하기";
+      btn.disabled = false; btn.textContent = "제출하기";
     }
   });
 
-  // ---------- 관리자 로그인 ----------
+  // ---------- 실시간 구독 ----------
+  if(db){
+    quizRef().on("value", function(snap){
+      latest = snap.val() || {};
+      var r = parseInt(latest.round || 0, 10);
+      // 초기화(round=0, 통계 없음)되면 이 기기의 제출 기록도 지움
+      if(r === 0 && !latest.rounds) clearAnswered();
+      var changed = (r !== round);
+      round = r;
+      if(changed || !adminMode) renderParticipant();
+      renderAdmin();
+    }, function(){
+      msg("quiz-err","서버 연결에 실패했어요. 인터넷 연결을 확인해 주세요.");
+    });
+  }else{
+    renderParticipant();
+  }
+
+  // ---------- 관리자 ----------
   $("btn-admin").addEventListener("click", function(){
     var box = $("login-box");
     box.classList.toggle("open");
@@ -476,36 +604,68 @@
       $("pw-input").value = "";
       msg("login-err","");
       $("login-box").classList.remove("open");
+      adminMode = true;
       show("view-admin");
       $("qr-url").value = window.location.href;
-      refreshStats();
+      if(!db) msg("admin-err","저장소(Firebase) 설정이 안 되어 있어요. 파일의 FIREBASE_CONFIG를 채워 주세요.");
+      renderAdmin();
     }else{
       msg("login-err","비밀번호가 맞지 않아요.");
     }
   }
   $("btn-login").addEventListener("click", tryLogin);
-  $("pw-input").addEventListener("keydown", function(e){
-    if(e.key === "Enter") tryLogin();
+  $("pw-input").addEventListener("keydown", function(e){ if(e.key === "Enter") tryLogin(); });
+
+  $("btn-back").addEventListener("click", function(){
+    adminMode = false;
+    renderParticipant();
   });
 
-  $("btn-back").addEventListener("click", function(){ show("view-quiz"); });
-  $("btn-refresh").addEventListener("click", refreshStats);
+  // 차수 버튼
+  [1,2,3,4].forEach(function(r){
+    $("btn-r" + r).addEventListener("click", async function(){
+      if(!db){ msg("admin-err","저장소 설정이 안 되어 있어요."); return; }
+      msg("admin-err","");
+      try{
+        await setRound(r);
+        if(r <= ROUNDS){ adminTab = r; }
+      }catch(e){ msg("admin-err","상태 변경에 실패했어요. 다시 시도해 주세요."); }
+    });
+  });
 
-  async function refreshStats(){
-    msg("admin-err","");
-    var stats = { counts:[0,0,0,0], total:0 };
-    if(!db){
-      msg("admin-err","저장소(Firebase) 설정이 안 되어 있어요. 파일의 FIREBASE_CONFIG를 채워 주세요.");
-    }else{
-      try{ stats = await loadStats(); }
-      catch(e){ msg("admin-err","통계를 불러오지 못했어요. 인터넷 연결을 확인해 주세요."); }
+  // 통계 탭
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
+    t.addEventListener("click", function(){
+      adminTab = parseInt(t.dataset.t, 10);
+      renderAdmin();
+    });
+  });
+
+  function renderAdmin(){
+    // 상태 표시
+    $("state-now").textContent = roundLabel(round);
+    for(var r=1; r<=ROUNDS+1; r++){
+      var b = $("btn-r" + r);
+      b.classList.toggle("active", r === round);
+      b.classList.toggle("done", r < round && r <= ROUNDS);
+      b.textContent = (r <= ROUNDS)
+        ? (r + "차 투표 " + (r === round ? "진행 중" : (r < round ? "완료" : "시작")))
+        : (round > ROUNDS ? "종료됨" : "투표 종료");
     }
-    $("stat-total").textContent = stats.total || 0;
+    // 탭
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
+      t.classList.toggle("on", parseInt(t.dataset.t,10) === adminTab);
+    });
+    // 통계
+    var rd = (latest.rounds && latest.rounds[adminTab]) || {};
+    var total = rd.total || 0;
+    var counts = [0,1,2,3].map(function(i){ return (rd.counts && rd.counts[i]) || 0; });
+    $("stat-total").textContent = total;
     var box = $("stat-bars");
     box.innerHTML = "";
     OPTIONS.forEach(function(name, i){
-      var cnt = stats.counts[i] || 0;
-      var pct = stats.total ? Math.round(cnt / stats.total * 100) : 0;
+      var cnt = counts[i];
+      var pct = total ? Math.round(cnt / total * 100) : 0;
       var row = document.createElement("div");
       row.className = "bar-row" + (i===CORRECT ? " correct" : "");
       var label = document.createElement("div");
@@ -527,22 +687,17 @@
     });
   }
 
-  // ---------- 통계 초기화 ----------
-  $("btn-reset").addEventListener("click", function(){
-    $("confirm-reset").classList.add("open");
-  });
-  $("btn-reset-no").addEventListener("click", function(){
-    $("confirm-reset").classList.remove("open");
-  });
+  // ---------- 초기화 ----------
+  $("btn-reset").addEventListener("click", function(){ $("confirm-reset").classList.add("open"); });
+  $("btn-reset-no").addEventListener("click", function(){ $("confirm-reset").classList.remove("open"); });
   $("btn-reset-yes").addEventListener("click", async function(){
     $("confirm-reset").classList.remove("open");
     if(!db){ msg("admin-err","저장소 설정이 안 되어 있어요."); return; }
     try{
-      await resetStats();
-      refreshStats();
-    }catch(e){
-      msg("admin-err","초기화에 실패했어요. 다시 시도해 주세요.");
-    }
+      await resetAll();
+      clearAnswered();
+      adminTab = 1;
+    }catch(e){ msg("admin-err","초기화에 실패했어요. 다시 시도해 주세요."); }
   });
 
   // ---------- QR ----------
@@ -557,7 +712,6 @@
     qrMade = true;
     $("btn-qr-save").classList.remove("hidden");
   });
-
   $("btn-qr-save").addEventListener("click", function(){
     if(!qrMade) return;
     var canvas = $("qrbox").querySelector("canvas");
@@ -565,11 +719,8 @@
     var dataUrl = canvas ? canvas.toDataURL("image/png") : (img ? img.src : null);
     if(!dataUrl){ msg("qr-err","QR을 먼저 만들어 주세요."); return; }
     var a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = "quiz-qr.png";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.href = dataUrl; a.download = "quiz-qr.png";
+    document.body.appendChild(a); a.click(); a.remove();
   });
 })();
 </script>
