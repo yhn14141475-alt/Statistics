@@ -468,7 +468,7 @@
     await quizRef().update(update);
   }
   async function setRound(r){ await quizRef().child("round").set(r); }
-  async function resetAll(){ await quizRef().set({ round: 0, rounds: null }); }
+  async function resetAll(){ await quizRef().set({ round: 0, rounds: null, session: Date.now() }); }
 
   // 같은 기기에서 같은 차수 중복 제출 방지
   function answeredKey(r){ return "answered-" + QUIZ_ID + "-r" + r; }
@@ -591,8 +591,14 @@
     quizRef().on("value", function(snap){
       latest = snap.val() || {};
       var r = parseInt(latest.round || 0, 10);
-      // 초기화(round=0, 통계 없음)되면 이 기기의 제출 기록도 지움
-      if(r === 0 && !latest.rounds) clearAnswered();
+      // 초기화될 때마다 세션 번호가 바뀜 → 기기에 남은 이전 세션의 제출 기록을 지움
+      var sess = String(latest.session || 0);
+      var mySess = null;
+      try{ mySess = localStorage.getItem("session-" + QUIZ_ID); }catch(e){}
+      if(mySess !== sess){
+        clearAnswered();
+        try{ localStorage.setItem("session-" + QUIZ_ID, sess); }catch(e){}
+      }
       var changed = (r !== round);
       round = r;
       if(changed || !adminMode) renderParticipant();
