@@ -422,6 +422,7 @@
   var round = 0;          // 서버의 현재 차수
   var adminMode = false;  // 관리자 화면을 보는 중이면 참가자 화면으로 자동 전환하지 않음
   var adminTab = 1;       // 관리자 통계 탭
+  var quizShownRound = -1; // 현재 퀴즈 화면에 떠 있는 차수
   var latest = {};        // 서버 전체 스냅샷
   var $ = function(id){ return document.getElementById(id); };
 
@@ -437,6 +438,7 @@
   function roundRef(r){ return db.ref("quizzes/" + QUIZ_ID + "/rounds/" + r); }
 
   function show(view){
+    if(view !== "view-quiz") quizShownRound = -1;
     ["view-wait","view-quiz","view-done","view-admin"].forEach(function(v){
       $(v).classList.toggle("hidden", v !== view);
     });
@@ -509,7 +511,9 @@
     var prev = alreadyAnswered(round);
     if(prev !== null){
       renderDone(round, parseInt(prev, 10));
-    }else{
+    }else if(quizShownRound !== round){
+      // 같은 차수의 퀴즈 화면이 이미 떠 있으면 선택을 건드리지 않음
+      quizShownRound = round;
       $("quiz-round").textContent = roundLabel(round);
       resetSelection();
       show("view-quiz");
@@ -548,6 +552,7 @@
   $("submit").addEventListener("click", async function(){
     if(selected === null) return;
     var r = round;
+    var i = selected;   // 저장 도중 화면이 갱신돼도 선택값이 바뀌지 않도록 고정
     var btn = $("submit");
     btn.disabled = true;
     btn.textContent = "제출 중…";
@@ -561,17 +566,23 @@
       msg("quiz-err","지금은 투표 시간이 아니에요.");
       return;
     }
+    var prev = alreadyAnswered(r);
+    if(prev !== null){
+      renderDone(r, parseInt(prev, 10));
+      return;
+    }
+    markAnswered(r, i);          // 저장 요청 전에 먼저 기록 (실시간 이벤트가 먼저 와도 안전)
+    renderDone(r, i);
     try{
-      if(alreadyAnswered(r) !== null){
-        renderDone(r, selected);
-        return;
-      }
-      await addVote(r, selected);
-      markAnswered(r, selected);
-      renderDone(r, selected);
+      await addVote(r, i);
     }catch(e){
+      try{ localStorage.removeItem(answeredKey(r)); }catch(_){}
+      quizShownRound = -1;
+      renderParticipant();
+      selected = i;
+      optBtns.forEach(function(b){ b.classList.toggle("selected", parseInt(b.dataset.i,10)===i); });
+      $("submit").disabled = false;
       msg("quiz-err","저장에 실패했어요. 인터넷 연결을 확인하고 다시 제출해 주세요.");
-      btn.disabled = false; btn.textContent = "제출하기";
     }
   });
 
